@@ -1,20 +1,14 @@
 import argparse
 from fastapi import FastAPI
 import uvicorn
+from mennekes_smart_charge import charger
 
 app = FastAPI()
+charger = charger.Charger('/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0')
 
 @app.get("/status")
 def get_status():
-    return {"status": "Charging at 80%"}
-
-@app.post("/start")
-def start_charging():
-    return {"message": "Charging started"}
-
-@app.post("/stop")
-def stop_charging():
-    return {"message": "Charging stopped"}
+    return charger.get_cp_state()
 
 def main():
     parser = argparse.ArgumentParser(description="Mennekes Smart Charge API server.")
