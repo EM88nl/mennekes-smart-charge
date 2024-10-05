@@ -6,7 +6,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'mennekes-smart-charge=mennekes_smart_charge_api.main:main'
+            'mennekes-smart-charge=mennekes_smart_charge.main:main'
         ]
     },
     install_requires=[
