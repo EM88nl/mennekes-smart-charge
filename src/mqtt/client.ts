@@ -10,6 +10,7 @@ export class MqttClient extends EventEmitter {
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 10;
   private connected: boolean = false;
+  private messageCount: number = 0;
 
   constructor(broker: string, topic: string) {
     super();
@@ -49,6 +50,18 @@ export class MqttClient extends EventEmitter {
         if (!data.electricity_currently_delivered || !data.electricity_currently_returned) {
           logger.warn('Received incomplete P1 data', { data });
           return;
+        }
+
+        this.messageCount++;
+
+        // Log every 10th message at info level
+        if (this.messageCount % 10 === 0) {
+          logger.info('MQTT P1 data received', {
+            delivered: data.electricity_currently_delivered,
+            returned: data.electricity_currently_returned,
+            timestamp: data.timestamp,
+            messageCount: this.messageCount
+          });
         }
 
         this.emit('data', data);

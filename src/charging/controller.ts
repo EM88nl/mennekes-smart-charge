@@ -17,6 +17,7 @@ export class ChargingController extends EventEmitter {
   private consecutiveErrors: number = 0;
   private maxConsecutiveErrors: number = 5;
   private statusUpdateInterval: NodeJS.Timeout | null = null;
+  private p1MessageCount: number = 0;
 
   constructor(modbusClient: ModbusClient, config: Config) {
     super();
@@ -47,15 +48,24 @@ export class ChargingController extends EventEmitter {
   }
 
   private startStatusUpdates(): void {
-    // Poll charger state at configured interval (e.g., every 10 seconds)
+    // Poll charger state at configured interval (e.g., every 2 seconds)
     const intervalMs = this.config.charging.statusUpdateIntervalSeconds * 1000;
+    let updateCount = 0;
 
     this.statusUpdateInterval = setInterval(async () => {
-      logger.debug('Periodic status update triggered');
+      updateCount++;
       try {
         await this.updateChargerState();
         this.emit('status-changed', this.getStatus());
-        logger.debug('Status update completed and broadcasted');
+
+        // Log every 10th update at info level (so every 20 seconds with 2s interval)
+        if (updateCount % 10 === 0) {
+          logger.info('Charger status polled', {
+            evseState: this.chargerState?.evseState,
+            authStatus: this.chargerState?.authStatus,
+            updateCount
+          });
+        }
       } catch (error) {
         logger.error('Error during periodic status update', {
           error: error instanceof Error ? error.message : 'Unknown error'
@@ -89,13 +99,19 @@ export class ChargingController extends EventEmitter {
     this.movingAverage.addValue(this.currentGridFlow);
     const isAdded = this.movingAverage.getCount() > wasAdded;
 
-    logger.debug('P1 data processed', {
-      delivered,
-      returned,
-      gridFlow: this.currentGridFlow.toFixed(2),
-      addedToAverage: isAdded,
-      avgSamples: this.movingAverage.getCount()
-    });
+    // Log at info level periodically (every 10th message)
+    if (!this.p1MessageCount) this.p1MessageCount = 0;
+    this.p1MessageCount++;
+
+    if (this.p1MessageCount % 10 === 0) {
+      logger.info('P1 data update', {
+        gridFlow: this.currentGridFlow.toFixed(2),
+        delivered,
+        returned,
+        avgSamples: this.movingAverage.getCount(),
+        totalMessages: this.p1MessageCount
+      });
+    }
 
     // Emit status update for real-time grid flow display
     this.emit('status-changed', this.getStatus());

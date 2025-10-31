@@ -132,15 +132,24 @@ export class ApiServer {
   }
 
   private setupControllerListeners(): void {
+    let broadcastCount = 0;
+
     // Broadcast status changes to all connected clients
     this.controller.on('status-changed', (status) => {
+      broadcastCount++;
       const clientCount = this.io.sockets.sockets.size;
-      logger.debug('Broadcasting status update to clients', {
-        clientCount,
-        evseState: status.chargerState.evseState,
-        gridFlow: status.gridFlow.toFixed(2),
-        movingAverage: status.movingAverage.toFixed(2)
-      });
+
+      // Log every 30th broadcast at info level
+      if (broadcastCount % 30 === 0) {
+        logger.info('Status broadcast', {
+          clientCount,
+          evseState: status.chargerState.evseState,
+          gridFlow: status.gridFlow.toFixed(2),
+          movingAverage: status.movingAverage.toFixed(2),
+          broadcastCount
+        });
+      }
+
       this.io.emit('status', status);
     });
 
