@@ -66,8 +66,12 @@ function updateUI(status) {
     const powerKw = (status.chargerState.chargingPower / 1000).toFixed(2);
     document.getElementById('powerValue').textContent = `${powerKw} kW`;
 
-    // Energy Transferred (convert Wh to kWh) - always show
-    const energyKwh = (status.chargerState.sessionEnergy / 1000).toFixed(2);
+    // Target Current (commanded by algorithm) - always show
+    const targetCurrent = status.targetCurrent.toFixed(1);
+    document.getElementById('targetCurrent').textContent = `${targetCurrent} A`;
+
+    // Energy Transferred (already in kWh) - always show
+    const energyKwh = status.chargerState.sessionEnergy.toFixed(2);
     document.getElementById('energyValue').textContent = `${energyKwh} kWh`;
 
     // Duration (convert seconds to h m format) - always show

@@ -156,7 +156,7 @@ export class ModbusClient {
       const currentL3Data = await this.client.readHoldingRegisters(0x0504, 2);
       const currentL3 = this.readFloat(currentL3Data.data);
 
-      // Read Session Energy (0x0B02-0x0B03, float in Wh)
+      // Read Session Energy (0x0B02-0x0B03, float in kWh)
       const sessionEnergyData = await this.client.readHoldingRegisters(0x0B02, 2);
       const sessionEnergy = this.readFloat(sessionEnergyData.data);
 
