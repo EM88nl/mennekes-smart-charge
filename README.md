@@ -16,7 +16,7 @@ Intelligent EV charging controller that optimizes charging based on solar surplu
 
 - **Real-time Updates:**
   - Grid flow updates: Every P1 meter message (~few seconds)
-  - Charger status updates: Every 10 seconds (configurable)
+  - Charger status updates: Every 2 seconds (configurable)
   - WebSocket broadcasts all updates to connected frontends
 
 - **Real-time Monitoring:**
@@ -60,7 +60,7 @@ Edit `config.json` to adjust settings:
 - **Charging thresholds**: Start/stop thresholds for solar only mode
 - **Check interval**: How often to adjust charging current (default: 5 minutes)
 - **Moving average**: Window size (default: 5 minutes)
-- **Status update interval**: How often to poll charger and broadcast status (default: 10 seconds)
+- **Status update interval**: How often to poll charger and broadcast status (default: 2 seconds)
 
 ## API Endpoints
 
@@ -98,7 +98,7 @@ Set charging mode.
 1. **P1 Meter Data**: Subscribes to MQTT topic for real-time grid flow data
 2. **Real-time Updates**:
    - Grid flow broadcast to frontend: Every P1 message (~few seconds)
-   - Charger status polled: Every 10 seconds (configurable)
+   - Charger status polled: Every 2 seconds (configurable)
 3. **Moving Average**: Calculates 5-minute moving average of net grid flow (1-minute samples)
 4. **Charging Decisions**: Every 5 minutes, evaluates if charging current should be adjusted
 5. **Mode Logic**:

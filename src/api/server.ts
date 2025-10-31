@@ -134,10 +134,18 @@ export class ApiServer {
   private setupControllerListeners(): void {
     // Broadcast status changes to all connected clients
     this.controller.on('status-changed', (status) => {
+      const clientCount = this.io.sockets.sockets.size;
+      logger.debug('Broadcasting status update to clients', {
+        clientCount,
+        evseState: status.chargerState.evseState,
+        gridFlow: status.gridFlow.toFixed(2),
+        movingAverage: status.movingAverage.toFixed(2)
+      });
       this.io.emit('status', status);
     });
 
     this.controller.on('mode-changed', (mode) => {
+      logger.info('Broadcasting mode change', { mode });
       this.io.emit('mode-changed', mode);
     });
 

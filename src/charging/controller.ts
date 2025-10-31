@@ -51,12 +51,21 @@ export class ChargingController extends EventEmitter {
     const intervalMs = this.config.charging.statusUpdateIntervalSeconds * 1000;
 
     this.statusUpdateInterval = setInterval(async () => {
-      await this.updateChargerState();
-      this.emit('status-changed', this.getStatus());
+      logger.debug('Periodic status update triggered');
+      try {
+        await this.updateChargerState();
+        this.emit('status-changed', this.getStatus());
+        logger.debug('Status update completed and broadcasted');
+      } catch (error) {
+        logger.error('Error during periodic status update', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     }, intervalMs);
 
     logger.info('Started periodic status updates', {
-      intervalSeconds: this.config.charging.statusUpdateIntervalSeconds
+      intervalSeconds: this.config.charging.statusUpdateIntervalSeconds,
+      intervalMs: intervalMs
     });
   }
 
@@ -76,7 +85,17 @@ export class ChargingController extends EventEmitter {
     this.currentGridFlow = delivered - returned;
 
     // Add to moving average (will only add if 1 minute has passed)
+    const wasAdded = this.movingAverage.getCount();
     this.movingAverage.addValue(this.currentGridFlow);
+    const isAdded = this.movingAverage.getCount() > wasAdded;
+
+    logger.debug('P1 data processed', {
+      delivered,
+      returned,
+      gridFlow: this.currentGridFlow.toFixed(2),
+      addedToAverage: isAdded,
+      avgSamples: this.movingAverage.getCount()
+    });
 
     // Emit status update for real-time grid flow display
     this.emit('status-changed', this.getStatus());
@@ -238,7 +257,15 @@ export class ChargingController extends EventEmitter {
 
   private async updateChargerState(): Promise<void> {
     try {
+      logger.debug('Reading charger state from Modbus...');
       this.chargerState = await this.modbusClient.readChargerState();
+      logger.debug('Charger state updated', {
+        evseState: this.chargerState.evseState,
+        authStatus: this.chargerState.authStatus,
+        chargingPower: this.chargerState.chargingPower.toFixed(2),
+        sessionEnergy: this.chargerState.sessionEnergy.toFixed(2),
+        sessionDuration: this.chargerState.sessionDuration
+      });
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       logger.error('Failed to read charger state', { error: errorMsg });

@@ -27,7 +27,7 @@
     },
     "checkIntervalSeconds": 300,
     "movingAverageMinutes": 5,
-    "statusUpdateIntervalSeconds": 10
+    "statusUpdateIntervalSeconds": 2
   },
   "api": {
     "port": 3000
