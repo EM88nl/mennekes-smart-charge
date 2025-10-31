@@ -54,6 +54,15 @@ export class MqttClient extends EventEmitter {
 
         this.messageCount++;
 
+        // Log first message at info level
+        if (this.messageCount === 1) {
+          logger.info('First MQTT P1 data received', {
+            delivered: data.electricity_currently_delivered,
+            returned: data.electricity_currently_returned,
+            timestamp: data.timestamp
+          });
+        }
+
         // Log every 10th message at info level
         if (this.messageCount % 10 === 0) {
           logger.info('MQTT P1 data received', {

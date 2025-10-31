@@ -52,8 +52,15 @@ export class ChargingController extends EventEmitter {
     const intervalMs = this.config.charging.statusUpdateIntervalSeconds * 1000;
     let updateCount = 0;
 
+    logger.info('Setting up periodic status updates', {
+      intervalSeconds: this.config.charging.statusUpdateIntervalSeconds,
+      intervalMs: intervalMs
+    });
+
     this.statusUpdateInterval = setInterval(async () => {
       updateCount++;
+      logger.debug('Status update interval tick', { updateCount });
+
       try {
         await this.updateChargerState();
         this.emit('status-changed', this.getStatus());
@@ -73,9 +80,8 @@ export class ChargingController extends EventEmitter {
       }
     }, intervalMs);
 
-    logger.info('Started periodic status updates', {
-      intervalSeconds: this.config.charging.statusUpdateIntervalSeconds,
-      intervalMs: intervalMs
+    logger.info('Status update interval started', {
+      intervalId: this.statusUpdateInterval ? 'set' : 'null'
     });
   }
 
@@ -102,6 +108,15 @@ export class ChargingController extends EventEmitter {
     // Log at info level periodically (every 10th message)
     if (!this.p1MessageCount) this.p1MessageCount = 0;
     this.p1MessageCount++;
+
+    // Log first P1 data processing
+    if (this.p1MessageCount === 1) {
+      logger.info('First P1 data processed', {
+        gridFlow: this.currentGridFlow.toFixed(2),
+        delivered,
+        returned
+      });
+    }
 
     if (this.p1MessageCount % 10 === 0) {
       logger.info('P1 data update', {
