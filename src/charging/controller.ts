@@ -50,7 +50,6 @@ export class ChargingController extends EventEmitter {
   private startStatusUpdates(): void {
     // Poll charger state at configured interval (e.g., every 2 seconds)
     const intervalMs = this.config.charging.statusUpdateIntervalSeconds * 1000;
-    let updateCount = 0;
 
     logger.info('Setting up periodic status updates', {
       intervalSeconds: this.config.charging.statusUpdateIntervalSeconds,
@@ -58,21 +57,22 @@ export class ChargingController extends EventEmitter {
     });
 
     this.statusUpdateInterval = setInterval(async () => {
-      updateCount++;
-      logger.debug('Status update interval tick', { updateCount });
-
       try {
         await this.updateChargerState();
         this.emit('status-changed', this.getStatus());
 
-        // Log every 10th update at info level (so every 20 seconds with 2s interval)
-        if (updateCount % 10 === 0) {
-          logger.info('Charger status polled', {
-            evseState: this.chargerState?.evseState,
-            authStatus: this.chargerState?.authStatus,
-            updateCount
-          });
-        }
+        // Log every update at info level
+        logger.info('Charger status polled', {
+          evseState: this.chargerState?.evseState,
+          authStatus: this.chargerState?.authStatus,
+          chargingPower: this.chargerState?.chargingPower.toFixed(2) + ' W',
+          currentL1: this.chargerState?.currentL1.toFixed(1) + ' A',
+          currentL2: this.chargerState?.currentL2.toFixed(1) + ' A',
+          currentL3: this.chargerState?.currentL3.toFixed(1) + ' A',
+          sessionEnergy: this.chargerState?.sessionEnergy.toFixed(2) + ' kWh',
+          sessionDuration: this.chargerState?.sessionDuration + ' s',
+          targetCurrent: this.targetCurrent.toFixed(1) + ' A'
+        });
       } catch (error) {
         logger.error('Error during periodic status update', {
           error: error instanceof Error ? error.message : 'Unknown error'
