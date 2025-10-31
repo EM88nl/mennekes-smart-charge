@@ -1,12 +1,12 @@
 // WebSocket connection
 const socket = io();
 
-// State mapping
+// State mapping - user-friendly names
 const stateNames = {
-    0: 'Not Initialized',
-    1: 'Idle',
-    2: 'EV Connected',
-    3: 'Preconditions Valid',
+    0: 'Starting Up',
+    1: 'Ready',
+    2: 'Vehicle Connected',
+    3: 'Preparing to Charge',
     4: 'Ready to Charge',
     5: 'Charging',
     6: 'Error',

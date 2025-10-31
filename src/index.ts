@@ -68,6 +68,7 @@ async function main() {
     const shutdown = async () => {
       logger.info('Shutdown signal received, shutting down gracefully...');
 
+      controller.destroy();
       mqttClient.disconnect();
       modbusClient.disconnect();
       apiServer.stop();

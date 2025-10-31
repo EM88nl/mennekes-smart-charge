@@ -16,6 +16,7 @@ export class ChargingController extends EventEmitter {
   private chargerState: ChargerState | null = null;
   private consecutiveErrors: number = 0;
   private maxConsecutiveErrors: number = 5;
+  private statusUpdateInterval: NodeJS.Timeout | null = null;
 
   constructor(modbusClient: ModbusClient, config: Config) {
     super();
@@ -28,15 +29,42 @@ export class ChargingController extends EventEmitter {
     try {
       // Read initial charger state
       await this.updateChargerState();
+
+      // Start periodic status updates
+      this.startStatusUpdates();
+
       logger.info('Charging controller initialized', {
         mode: this.currentMode,
-        movingAverageWindow: this.config.charging.movingAverageMinutes
+        movingAverageWindow: this.config.charging.movingAverageMinutes,
+        statusUpdateInterval: this.config.charging.statusUpdateIntervalSeconds
       });
     } catch (error) {
       logger.error('Failed to initialize charging controller', {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
       throw error;
+    }
+  }
+
+  private startStatusUpdates(): void {
+    // Poll charger state at configured interval (e.g., every 10 seconds)
+    const intervalMs = this.config.charging.statusUpdateIntervalSeconds * 1000;
+
+    this.statusUpdateInterval = setInterval(async () => {
+      await this.updateChargerState();
+      this.emit('status-changed', this.getStatus());
+    }, intervalMs);
+
+    logger.info('Started periodic status updates', {
+      intervalSeconds: this.config.charging.statusUpdateIntervalSeconds
+    });
+  }
+
+  private stopStatusUpdates(): void {
+    if (this.statusUpdateInterval) {
+      clearInterval(this.statusUpdateInterval);
+      this.statusUpdateInterval = null;
+      logger.info('Stopped periodic status updates');
     }
   }
 
@@ -50,6 +78,9 @@ export class ChargingController extends EventEmitter {
     // Add to moving average (will only add if 1 minute has passed)
     this.movingAverage.addValue(this.currentGridFlow);
 
+    // Emit status update for real-time grid flow display
+    this.emit('status-changed', this.getStatus());
+
     // Check if we should adjust charging (every 5 minutes)
     const now = Date.now();
     const timeSinceLastCheck = now - this.lastCheckTime;
@@ -58,7 +89,9 @@ export class ChargingController extends EventEmitter {
     if (timeSinceLastCheck >= checkInterval || this.lastCheckTime === 0) {
       this.lastCheckTime = now;
       this.adjustCharging().catch(err => {
-        console.error('Failed to adjust charging:', err);
+        logger.error('Failed to adjust charging', {
+          error: err instanceof Error ? err.message : 'Unknown error'
+        });
       });
     }
   }
@@ -227,6 +260,11 @@ export class ChargingController extends EventEmitter {
 
   getMode(): ChargingMode {
     return this.currentMode;
+  }
+
+  destroy(): void {
+    this.stopStatusUpdates();
+    logger.info('Charging controller destroyed');
   }
 
   getStatus(): SystemStatus {

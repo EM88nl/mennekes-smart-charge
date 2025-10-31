@@ -26,7 +26,8 @@
       "minimumCurrent": 6
     },
     "checkIntervalSeconds": 300,
-    "movingAverageMinutes": 5
+    "movingAverageMinutes": 5,
+    "statusUpdateIntervalSeconds": 10
   },
   "api": {
     "port": 3000

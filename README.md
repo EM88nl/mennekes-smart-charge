@@ -10,9 +10,14 @@ Intelligent EV charging controller that optimizes charging based on solar surplu
   - **Boost**: Charge at maximum power regardless of solar surplus
 
 - **Smart Logic:**
-  - 15-minute moving average of grid flow (1-minute intervals)
+  - 5-minute moving average of grid flow (1-minute intervals)
   - Checks every 5 minutes if charging power should be adjusted
   - Hysteresis to prevent rapid on/off cycling
+
+- **Real-time Updates:**
+  - Grid flow updates: Every P1 meter message (~few seconds)
+  - Charger status updates: Every 10 seconds (configurable)
+  - WebSocket broadcasts all updates to connected frontends
 
 - **Real-time Monitoring:**
   - WebSocket for live updates
@@ -53,8 +58,9 @@ Edit `config.json` to adjust settings:
 - **MQTT broker**: Address and topic for P1 meter data
 - **Modbus**: Serial port, baud rate, slave ID
 - **Charging thresholds**: Start/stop thresholds for solar only mode
-- **Check interval**: How often to adjust charging (default: 5 minutes)
-- **Moving average**: Window size (default: 15 minutes)
+- **Check interval**: How often to adjust charging current (default: 5 minutes)
+- **Moving average**: Window size (default: 5 minutes)
+- **Status update interval**: How often to poll charger and broadcast status (default: 10 seconds)
 
 ## API Endpoints
 
@@ -90,13 +96,16 @@ Set charging mode.
 ## How It Works
 
 1. **P1 Meter Data**: Subscribes to MQTT topic for real-time grid flow data
-2. **Moving Average**: Calculates 15-minute moving average of net grid flow
-3. **Check Interval**: Every 5 minutes, evaluates if charging should be adjusted
-4. **Mode Logic**:
+2. **Real-time Updates**:
+   - Grid flow broadcast to frontend: Every P1 message (~few seconds)
+   - Charger status polled: Every 10 seconds (configurable)
+3. **Moving Average**: Calculates 5-minute moving average of net grid flow (1-minute samples)
+4. **Charging Decisions**: Every 5 minutes, evaluates if charging current should be adjusted
+5. **Mode Logic**:
    - **Solar Only**: Starts charging at 4.5 kW surplus, stops at 4.0 kW
    - **Grid Support**: Always charges at minimum 6A, increases with surplus
    - **Boost**: Always charges at maximum 32A
-5. **Modbus Control**: Sends commands to charger via Modbus RTU
+6. **Modbus Control**: Sends commands to charger via Modbus RTU
 
 ## Grid Flow Calculation
 

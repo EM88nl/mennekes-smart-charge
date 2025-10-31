@@ -71,6 +71,7 @@ export interface Config {
     };
     checkIntervalSeconds: number;
     movingAverageMinutes: number;
+    statusUpdateIntervalSeconds: number;
   };
   api: {
     port: number;
