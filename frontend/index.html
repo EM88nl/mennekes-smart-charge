@@ -163,12 +163,12 @@
         <div class="card">
             <h2>Charging Mode</h2>
             <div class="mode-buttons">
-                <button class="mode-btn active" data-mode="solar_only">Solar Only</button>
+                <button class="mode-btn" data-mode="solar_only">Solar Only</button>
                 <button class="mode-btn" data-mode="grid_support">Grid Support</button>
                 <button class="mode-btn" data-mode="boost">Boost</button>
             </div>
             <div class="mode-description" id="modeDescription">
-                Charges only when solar surplus is available. Automatically stops when surplus drops below minimum threshold.
+                Loading...
             </div>
         </div>
 
@@ -181,7 +181,7 @@
                     <span class="status-value importing" id="currentGridFlow">+0.7 kW</span>
                 </div>
                 <div class="status-item">
-                    <span class="status-label">Avg. Net Flow (15m)</span>
+                    <span class="status-label">Avg. Net Flow (5m)</span>
                     <span class="status-value surplus" id="avgNetFlow">-2.5 kW</span>
                 </div>
             </div>
@@ -199,17 +199,17 @@
                     <span class="status-label">State</span>
                     <span class="status-value charging" id="chargerState">Charging</span>
                 </div>
-                <div class="status-item" id="powerDisplay">
+                <div class="status-item">
                     <span class="status-label">Power</span>
-                    <span class="status-value power-value" id="powerValue">3.5 kW</span>
+                    <span class="status-value power-value" id="powerValue">0.0 kW</span>
                 </div>
-                <div class="status-item" id="energyDisplay">
+                <div class="status-item">
                     <span class="status-label">Energy Transferred</span>
-                    <span class="status-value energy-value" id="energyValue">12.5 kWh</span>
+                    <span class="status-value energy-value" id="energyValue">0.0 kWh</span>
                 </div>
-                <div class="status-item" id="durationDisplay">
+                <div class="status-item">
                     <span class="status-label">Duration</span>
-                    <span class="status-value duration-value" id="durationValue">3h 45m</span>
+                    <span class="status-value duration-value" id="durationValue">0h 0m</span>
                 </div>
             </div>
         </div>
@@ -226,44 +226,28 @@
         // Mock charger state updates (replace with actual API calls)
         function updateChargerState(state, power = null, energy = null, duration = null) {
             const stateElement = document.getElementById('chargerState');
-            const powerDisplay = document.getElementById('powerDisplay');
-            const energyDisplay = document.getElementById('energyDisplay');
-            const durationDisplay = document.getElementById('durationDisplay');
 
             stateElement.textContent = state.charAt(0).toUpperCase() + state.slice(1);
             stateElement.className = `status-value ${state}`;
 
-            if (state === 'charging') {
-                if (power !== null) {
-                    powerDisplay.style.display = 'flex';
-                    document.getElementById('powerValue').textContent = `${power} kW`;
-                }
-                if (energy !== null) {
-                    energyDisplay.style.display = 'flex';
-                    document.getElementById('energyValue').textContent = `${energy} kWh`;
-                }
-                if (duration !== null) {
-                    durationDisplay.style.display = 'flex';
-                    document.getElementById('durationValue').textContent = duration;
-                }
-            } else {
-                powerDisplay.style.display = 'none';
-                energyDisplay.style.display = 'none';
-                durationDisplay.style.display = 'none';
+            if (power !== null) {
+                document.getElementById('powerValue').textContent = `${power} kW`;
+            }
+            if (energy !== null) {
+                document.getElementById('energyValue').textContent = `${energy} kWh`;
+            }
+            if (duration !== null) {
+                document.getElementById('durationValue').textContent = duration;
             }
         }
 
         // Update energy transferred
         function updateEnergy(energy) {
-            const energyDisplay = document.getElementById('energyDisplay');
-            energyDisplay.style.display = 'flex';
             document.getElementById('energyValue').textContent = `${energy} kWh`;
         }
 
         // Update duration
         function updateDuration(duration) {
-            const durationDisplay = document.getElementById('durationDisplay');
-            durationDisplay.style.display = 'flex';
             document.getElementById('durationValue').textContent = duration;
         }
 

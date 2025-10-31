@@ -38,6 +38,9 @@ socket.on('error', (error) => {
 
 // Update UI with status data
 function updateUI(status) {
+    // Set active mode based on backend status
+    setActiveMode(status.mode);
+
     // Authorization
     updateAuthStatus(status.authorized);
 
@@ -59,32 +62,17 @@ function updateUI(status) {
     // Average Net Flow
     updateAvgNetFlow(status.movingAverage);
 
-    // Power (convert W to kW)
-    if (status.charging && status.chargerState.chargingPower > 0) {
-        document.getElementById('powerDisplay').style.display = 'flex';
-        const powerKw = (status.chargerState.chargingPower / 1000).toFixed(2);
-        document.getElementById('powerValue').textContent = `${powerKw} kW`;
-    } else {
-        document.getElementById('powerDisplay').style.display = 'none';
-    }
+    // Power (convert W to kW) - always show
+    const powerKw = (status.chargerState.chargingPower / 1000).toFixed(2);
+    document.getElementById('powerValue').textContent = `${powerKw} kW`;
 
-    // Energy Transferred (convert Wh to kWh)
-    if (status.chargerState.sessionEnergy > 0) {
-        document.getElementById('energyDisplay').style.display = 'flex';
-        const energyKwh = (status.chargerState.sessionEnergy / 1000).toFixed(2);
-        document.getElementById('energyValue').textContent = `${energyKwh} kWh`;
-    } else {
-        document.getElementById('energyDisplay').style.display = 'none';
-    }
+    // Energy Transferred (convert Wh to kWh) - always show
+    const energyKwh = (status.chargerState.sessionEnergy / 1000).toFixed(2);
+    document.getElementById('energyValue').textContent = `${energyKwh} kWh`;
 
-    // Duration (convert seconds to h m format)
-    if (status.chargerState.sessionDuration > 0) {
-        document.getElementById('durationDisplay').style.display = 'flex';
-        const duration = formatDuration(status.chargerState.sessionDuration);
-        document.getElementById('durationValue').textContent = duration;
-    } else {
-        document.getElementById('durationDisplay').style.display = 'none';
-    }
+    // Duration (convert seconds to h m format) - always show
+    const duration = formatDuration(status.chargerState.sessionDuration);
+    document.getElementById('durationValue').textContent = duration;
 }
 
 // Format duration from seconds to "Xh Ym"
