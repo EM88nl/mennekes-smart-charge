@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mennekes Smart Charge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 32px;
+            color: white;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-bottom: 16px;
+            color: #333;
+            font-size: 20px;
+        }
+
+        .status-display {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #f7f7f7;
+            border-radius: 8px;
+        }
+
+        .status-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .status-value {
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .status-value.idle {
+            color: #666;
+        }
+
+        .status-value.charging {
+            color: #10b981;
+        }
+
+        .power-value,
+        .energy-value,
+        .duration-value {
+            color: #667eea;
+        }
+
+        .status-value.authorized {
+            color: #10b981;
+        }
+
+        .status-value.not-authorized {
+            color: #ef4444;
+        }
+
+        .mode-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mode-btn {
+            padding: 16px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .mode-btn:hover {
+            border-color: #667eea;
+            background: #f9fafb;
+        }
+
+        .mode-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .mode-btn:active {
+            transform: scale(0.98);
+        }
+
+        .mode-description {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f0f4ff;
+            border-left: 3px solid #667eea;
+            border-radius: 4px;
+            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Mennekes Smart Charge</h1>
+        </header>
+
+        <!-- Card 1: Charging Mode -->
+        <div class="card">
+            <h2>Charging Mode</h2>
+            <div class="mode-buttons">
+                <button class="mode-btn active" data-mode="solar_only">Solar Only</button>
+                <button class="mode-btn" data-mode="grid_support">Grid Support</button>
+                <button class="mode-btn" data-mode="boost">Boost</button>
+            </div>
+            <div class="mode-description" id="modeDescription">
+                Charges only when solar surplus is available. Automatically stops when surplus drops below minimum threshold.
+            </div>
+        </div>
+
+        <!-- Card 2: Charger Status -->
+        <div class="card">
+            <h2>Charger Status</h2>
+            <div class="status-display">
+                <div class="status-item">
+                    <span class="status-label">Authorization</span>
+                    <span class="status-value not-authorized" id="authStatus">Not Authorized</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">State</span>
+                    <span class="status-value charging" id="chargerState">Charging</span>
+                </div>
+                <div class="status-item" id="powerDisplay">
+                    <span class="status-label">Power</span>
+                    <span class="status-value power-value" id="powerValue">3.5 kW</span>
+                </div>
+                <div class="status-item" id="energyDisplay">
+                    <span class="status-label">Energy Transferred</span>
+                    <span class="status-value energy-value" id="energyValue">12.5 kWh</span>
+                </div>
+                <div class="status-item" id="durationDisplay">
+                    <span class="status-label">Duration</span>
+                    <span class="status-value duration-value" id="durationValue">3h 45m</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mode descriptions
+        const modeDescriptions = {
+            solar_only: 'Only charge when this is possible without importing power from the grid, automatically adjusts power to use solar surplus.',
+            grid_support: 'Always charge with minimum power, automatically adjusts power to use solar surplus while supplementing from the grid as needed.',
+            boost: 'Charge at maximum power regardless of solar surplus.'
+        };
+
+        // Mode selection handling
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        const modeDescription = document.getElementById('modeDescription');
+
+        modeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                modeButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+
+                const mode = this.dataset.mode;
+                modeDescription.textContent = modeDescriptions[mode];
+                console.log('Selected mode:', mode);
+            });
+        });
+
+        // Mock charger state updates (replace with actual API calls)
+        function updateChargerState(state, power = null, energy = null, duration = null) {
+            const stateElement = document.getElementById('chargerState');
+            const powerDisplay = document.getElementById('powerDisplay');
+            const energyDisplay = document.getElementById('energyDisplay');
+            const durationDisplay = document.getElementById('durationDisplay');
+
+            stateElement.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+            stateElement.className = `status-value ${state}`;
+
+            if (state === 'charging') {
+                if (power !== null) {
+                    powerDisplay.style.display = 'flex';
+                    document.getElementById('powerValue').textContent = `${power} kW`;
+                }
+                if (energy !== null) {
+                    energyDisplay.style.display = 'flex';
+                    document.getElementById('energyValue').textContent = `${energy} kWh`;
+                }
+                if (duration !== null) {
+                    durationDisplay.style.display = 'flex';
+                    document.getElementById('durationValue').textContent = duration;
+                }
+            } else {
+                powerDisplay.style.display = 'none';
+                energyDisplay.style.display = 'none';
+                durationDisplay.style.display = 'none';
+            }
+        }
+
+        // Update energy transferred
+        function updateEnergy(energy) {
+            const energyDisplay = document.getElementById('energyDisplay');
+            energyDisplay.style.display = 'flex';
+            document.getElementById('energyValue').textContent = `${energy} kWh`;
+        }
+
+        // Update duration
+        function updateDuration(duration) {
+            const durationDisplay = document.getElementById('durationDisplay');
+            durationDisplay.style.display = 'flex';
+            document.getElementById('durationValue').textContent = duration;
+        }
+
+        // Update authorization status
+        function updateAuthStatus(authorized) {
+            const authElement = document.getElementById('authStatus');
+
+            if (authorized) {
+                authElement.textContent = 'Authorized';
+                authElement.className = 'status-value authorized';
+            } else {
+                authElement.textContent = 'Not Authorized';
+                authElement.className = 'status-value not-authorized';
+            }
+        }
+
+        // Example: updateChargerState('idle');
+        // Example: updateChargerState('charging', 7.2, 12.5, '3h 45m');
+        // Example: updateEnergy(15.3);
+        // Example: updateDuration('2h 15m');
+        // Example: updateAuthStatus(true);
+        // Example: updateAuthStatus(false);
+    </script>
+</body>
+</html>
