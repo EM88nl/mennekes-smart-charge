@@ -1,0 +1,35 @@
+{
+  "mqtt": {
+    "broker": "mqtt://192.168.1.100",
+    "topic": "dsmr/json"
+  },
+  "modbus": {
+    "port": "/dev/serial/by-id/usb-XXXX-Serial-if00-port0",
+    "baudRate": 57600,
+    "dataBits": 8,
+    "stopBits": 2,
+    "parity": "none",
+    "slaveId": 50
+  },
+  "charger": {
+    "maxCurrent": 32,
+    "minCurrent": 6,
+    "voltage": 230,
+    "phases": 3
+  },
+  "charging": {
+    "solarOnly": {
+      "startThresholdKw": 4.5,
+      "stopThresholdKw": 4.0
+    },
+    "gridSupport": {
+      "minimumCurrent": 6
+    },
+    "checkIntervalSeconds": 300,
+    "movingAverageMinutes": 5,
+    "statusUpdateIntervalSeconds": 2
+  },
+  "api": {
+    "port": 3000
+  }
+}

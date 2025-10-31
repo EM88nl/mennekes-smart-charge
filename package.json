@@ -1,30 +1,65 @@
 {
   "name": "mennekes-smart-charge",
   "version": "1.0.0",
-  "description": "Smart EV charging controller using solar surplus",
+  "description": "Intelligent EV charging controller that optimizes charging based on solar surplus using P1 meter data and Modbus RTU control for Mennekes AMTRON chargers",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
-  "keywords": ["ev", "charging", "solar", "modbus", "mqtt"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EM88nl/mennekes-smart-charge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/EM88nl/mennekes-smart-charge/issues"
+  },
+  "homepage": "https://github.com/EM88nl/mennekes-smart-charge#readme",
+  "keywords": [
+    "ev-charging",
+    "electric-vehicle",
+    "solar-charging",
+    "solar-surplus",
+    "smart-charging",
+    "mennekes",
+    "amtron",
+    "modbus-rtu",
+    "mqtt",
+    "p1-meter",
+    "dsmr",
+    "home-automation",
+    "energy-management",
+    "typescript"
+  ],
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.6.1",
-    "mqtt": "^5.3.5",
-    "modbus-serial": "^8.0.16",
     "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "modbus-serial": "^8.0.16",
+    "mqtt": "^5.3.5",
+    "socket.io": "^4.6.1",
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.11.5",
+    "@jest/globals": "^30.2.0",
     "@types/cors": "^2.8.17",
-    "typescript": "^5.3.3",
-    "ts-node-dev": "^2.0.0"
+    "@types/express": "^4.17.21",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.11.5",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
   }
 }
