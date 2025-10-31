@@ -66,9 +66,6 @@ export class ChargingController extends EventEmitter {
           evseState: this.chargerState?.evseState,
           authStatus: this.chargerState?.authStatus,
           chargingPower: this.chargerState?.chargingPower.toFixed(2) + ' W',
-          currentL1: this.chargerState?.currentL1.toFixed(1) + ' A',
-          currentL2: this.chargerState?.currentL2.toFixed(1) + ' A',
-          currentL3: this.chargerState?.currentL3.toFixed(1) + ' A',
           sessionEnergy: this.chargerState?.sessionEnergy.toFixed(2) + ' kWh',
           sessionDuration: this.chargerState?.sessionDuration + ' s',
           targetCurrent: this.targetCurrent.toFixed(1) + ' A'
@@ -332,9 +329,6 @@ export class ChargingController extends EventEmitter {
         evseState: 0,
         authStatus: 0,
         chargingPower: 0,
-        currentL1: 0,
-        currentL2: 0,
-        currentL3: 0,
         sessionEnergy: 0,
         sessionDuration: 0
       },

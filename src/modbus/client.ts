@@ -146,16 +146,6 @@ export class ModbusClient {
       const powerData = await this.client.readHoldingRegisters(0x0512, 2);
       const chargingPower = this.readFloat(powerData.data);
 
-      // Read Current L1, L2, L3 (floats)
-      const currentL1Data = await this.client.readHoldingRegisters(0x0500, 2);
-      const currentL1 = this.readFloat(currentL1Data.data);
-
-      const currentL2Data = await this.client.readHoldingRegisters(0x0502, 2);
-      const currentL2 = this.readFloat(currentL2Data.data);
-
-      const currentL3Data = await this.client.readHoldingRegisters(0x0504, 2);
-      const currentL3 = this.readFloat(currentL3Data.data);
-
       // Read Session Energy (0x0B02-0x0B03, float in kWh)
       const sessionEnergyData = await this.client.readHoldingRegisters(0x0B02, 2);
       const sessionEnergy = this.readFloat(sessionEnergyData.data);
@@ -168,9 +158,6 @@ export class ModbusClient {
         evseState,
         authStatus,
         chargingPower,
-        currentL1,
-        currentL2,
-        currentL3,
         sessionEnergy,
         sessionDuration
       };

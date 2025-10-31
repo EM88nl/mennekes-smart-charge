@@ -19,10 +19,7 @@ export interface ChargerState {
   evseState: number;          // 0x0100
   authStatus: number;         // 0x0101
   chargingPower: number;      // 0x0512-0x0513 (W)
-  currentL1: number;          // 0x0500-0x0501 (A)
-  currentL2: number;          // 0x0502-0x0503 (A)
-  currentL3: number;          // 0x0504-0x0505 (A)
-  sessionEnergy: number;      // 0x0B02-0x0B03 (Wh)
+  sessionEnergy: number;      // 0x0B02-0x0B03 (kWh)
   sessionDuration: number;    // 0x0B04-0x0B05 (seconds)
 }
 
