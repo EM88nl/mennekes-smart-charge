@@ -100,6 +100,14 @@
             color: #ef4444;
         }
 
+        .status-value.surplus {
+            color: #10b981;
+        }
+
+        .status-value.importing {
+            color: #ef4444;
+        }
+
         .mode-buttons {
             display: flex;
             flex-direction: column;
@@ -164,7 +172,22 @@
             </div>
         </div>
 
-        <!-- Card 2: Charger Status -->
+        <!-- Card 2: Grid/Solar Status -->
+        <div class="card">
+            <h2>Grid/Solar Status</h2>
+            <div class="status-display">
+                <div class="status-item">
+                    <span class="status-label">Current Grid Flow</span>
+                    <span class="status-value importing" id="currentGridFlow">+0.7 kW</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Avg. Net Flow (15m)</span>
+                    <span class="status-value surplus" id="avgNetFlow">-2.5 kW</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Charger Status -->
         <div class="card">
             <h2>Charger Status</h2>
             <div class="status-display">
@@ -193,27 +216,12 @@
     </div>
 
     <script>
-        // Mode descriptions
-        const modeDescriptions = {
+        // Mode descriptions (make global for app.js)
+        window.modeDescriptions = {
             solar_only: 'Only charge when this is possible without importing power from the grid, automatically adjusts power to use solar surplus.',
             grid_support: 'Always charge with minimum power, automatically adjusts power to use solar surplus while supplementing from the grid as needed.',
             boost: 'Charge at maximum power regardless of solar surplus.'
         };
-
-        // Mode selection handling
-        const modeButtons = document.querySelectorAll('.mode-btn');
-        const modeDescription = document.getElementById('modeDescription');
-
-        modeButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                modeButtons.forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-
-                const mode = this.dataset.mode;
-                modeDescription.textContent = modeDescriptions[mode];
-                console.log('Selected mode:', mode);
-            });
-        });
 
         // Mock charger state updates (replace with actual API calls)
         function updateChargerState(state, power = null, energy = null, duration = null) {
@@ -272,12 +280,53 @@
             }
         }
 
+        // Update current grid flow (negative = surplus/exporting, positive = importing)
+        function updateCurrentGridFlow(netFlow) {
+            const element = document.getElementById('currentGridFlow');
+
+            // Format with sign and 2 decimals
+            const formatted = (netFlow >= 0 ? '+' : '') + netFlow.toFixed(2) + ' kW';
+            element.textContent = formatted;
+
+            // Color: green for surplus (negative), red for importing (positive)
+            if (netFlow < 0) {
+                element.className = 'status-value surplus';
+            } else {
+                element.className = 'status-value importing';
+            }
+        }
+
+        // Update average net flow (negative = surplus/exporting, positive = importing)
+        function updateAvgNetFlow(netFlow) {
+            const avgElement = document.getElementById('avgNetFlow');
+
+            // Format with sign and 2 decimals
+            const formatted = (netFlow >= 0 ? '+' : '') + netFlow.toFixed(2) + ' kW';
+            avgElement.textContent = formatted;
+
+            // Color: green for surplus (negative), red for importing (positive)
+            if (netFlow < 0) {
+                avgElement.className = 'status-value surplus';
+            } else {
+                avgElement.className = 'status-value importing';
+            }
+        }
+
         // Example: updateChargerState('idle');
         // Example: updateChargerState('charging', 7.2, 12.5, '3h 45m');
         // Example: updateEnergy(15.3);
         // Example: updateDuration('2h 15m');
         // Example: updateAuthStatus(true);
         // Example: updateAuthStatus(false);
+        // Example: updateCurrentGridFlow(0.7);  // importing
+        // Example: updateCurrentGridFlow(-3.2); // surplus
+        // Example: updateAvgNetFlow(-2.5); // surplus
+        // Example: updateAvgNetFlow(1.3);  // importing
     </script>
+
+    <!-- Socket.IO client -->
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- Application logic -->
+    <script src="/app.js"></script>
 </body>
 </html>

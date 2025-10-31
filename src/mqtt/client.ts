@@ -1,11 +1,15 @@
 import mqtt from 'mqtt';
 import { EventEmitter } from 'events';
 import { P1Data } from '../types';
+import { logger } from '../logger';
 
 export class MqttClient extends EventEmitter {
   private client: mqtt.MqttClient | null = null;
   private broker: string;
   private topic: string;
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 10;
+  private connected: boolean = false;
 
   constructor(broker: string, topic: string) {
     super();
@@ -14,20 +18,25 @@ export class MqttClient extends EventEmitter {
   }
 
   connect(): void {
-    console.log(`Connecting to MQTT broker: ${this.broker}`);
+    logger.info(`Connecting to MQTT broker: ${this.broker}`);
 
     this.client = mqtt.connect(this.broker, {
       reconnectPeriod: 5000,
-      connectTimeout: 10000
+      connectTimeout: 10000,
+      keepalive: 60
     });
 
     this.client.on('connect', () => {
-      console.log('Connected to MQTT broker');
+      this.connected = true;
+      this.reconnectAttempts = 0;
+      logger.info('Connected to MQTT broker');
+
       this.client!.subscribe(this.topic, (err) => {
         if (err) {
-          console.error('Failed to subscribe to topic:', err);
+          logger.error('Failed to subscribe to topic', { topic: this.topic, error: err.message });
+          this.emit('error', err);
         } else {
-          console.log(`Subscribed to topic: ${this.topic}`);
+          logger.info(`Subscribed to topic: ${this.topic}`);
         }
       });
     });
@@ -35,30 +44,58 @@ export class MqttClient extends EventEmitter {
     this.client.on('message', (topic, message) => {
       try {
         const data: P1Data = JSON.parse(message.toString());
+
+        // Validate data
+        if (!data.electricity_currently_delivered || !data.electricity_currently_returned) {
+          logger.warn('Received incomplete P1 data', { data });
+          return;
+        }
+
         this.emit('data', data);
       } catch (error) {
-        console.error('Failed to parse MQTT message:', error);
+        logger.error('Failed to parse MQTT message', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          message: message.toString().substring(0, 100)
+        });
       }
     });
 
     this.client.on('error', (error) => {
-      console.error('MQTT error:', error);
+      logger.error('MQTT error', { error: error.message });
       this.emit('error', error);
     });
 
     this.client.on('offline', () => {
-      console.warn('MQTT client offline, will attempt to reconnect...');
+      this.connected = false;
+      this.reconnectAttempts++;
+
+      if (this.reconnectAttempts <= this.maxReconnectAttempts) {
+        logger.warn(`MQTT client offline (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}), will attempt to reconnect...`);
+      } else {
+        logger.error('MQTT client offline, max reconnect attempts reached');
+        this.emit('max-reconnect-reached');
+      }
     });
 
     this.client.on('reconnect', () => {
-      console.log('Reconnecting to MQTT broker...');
+      logger.info('Reconnecting to MQTT broker...');
+    });
+
+    this.client.on('close', () => {
+      this.connected = false;
+      logger.warn('MQTT connection closed');
     });
   }
 
   disconnect(): void {
     if (this.client) {
       this.client.end();
-      console.log('Disconnected from MQTT broker');
+      this.connected = false;
+      logger.info('Disconnected from MQTT broker');
     }
+  }
+
+  isConnected(): boolean {
+    return this.connected && this.client?.connected === true;
   }
 }

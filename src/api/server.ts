@@ -1,10 +1,11 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
 import cors from 'cors';
 import path from 'path';
 import { ChargingController } from '../charging/controller';
 import { ChargingMode } from '../types';
+import { logger } from '../logger';
 
 export class ApiServer {
   private app: express.Application;
@@ -34,7 +35,33 @@ export class ApiServer {
   private setupMiddleware(): void {
     this.app.use(cors());
     this.app.use(express.json());
+
+    // Request logging middleware
+    this.app.use((req: Request, res: Response, next: NextFunction) => {
+      const start = Date.now();
+      res.on('finish', () => {
+        const duration = Date.now() - start;
+        logger.info('HTTP request', {
+          method: req.method,
+          path: req.path,
+          status: res.statusCode,
+          duration: `${duration}ms`
+        });
+      });
+      next();
+    });
+
     this.app.use(express.static(path.join(__dirname, '../../frontend')));
+
+    // Error handling middleware
+    this.app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+      logger.error('Express error', {
+        error: err.message,
+        stack: err.stack,
+        path: req.path
+      });
+      res.status(500).json({ error: 'Internal server error' });
+    });
   }
 
   private setupRoutes(): void {
@@ -69,20 +96,37 @@ export class ApiServer {
 
   private setupWebSocket(): void {
     this.io.on('connection', (socket) => {
-      console.log('Client connected via WebSocket');
+      logger.info('WebSocket client connected', { socketId: socket.id });
 
       // Send initial status
-      socket.emit('status', this.controller.getStatus());
+      try {
+        socket.emit('status', this.controller.getStatus());
+      } catch (error) {
+        logger.error('Failed to send initial status', {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected from WebSocket');
+        logger.info('WebSocket client disconnected', { socketId: socket.id });
       });
 
       // Handle mode change requests
       socket.on('set-mode', (mode: ChargingMode) => {
+        logger.info('Mode change via WebSocket', { mode, socketId: socket.id });
+
         if (['solar_only', 'grid_support', 'boost'].includes(mode)) {
           this.controller.setMode(mode);
+        } else {
+          logger.warn('Invalid mode requested via WebSocket', { mode, socketId: socket.id });
         }
+      });
+
+      socket.on('error', (error) => {
+        logger.error('WebSocket error', {
+          error: error.message,
+          socketId: socket.id
+        });
       });
     });
   }
@@ -96,17 +140,22 @@ export class ApiServer {
     this.controller.on('mode-changed', (mode) => {
       this.io.emit('mode-changed', mode);
     });
+
+    this.controller.on('error', (error) => {
+      logger.error('Controller error', { error: error.message });
+      this.io.emit('error', { message: error.message });
+    });
   }
 
   start(): void {
     this.httpServer.listen(this.port, () => {
-      console.log(`API server running on http://localhost:${this.port}`);
+      logger.info(`API server started`, { port: this.port, url: `http://localhost:${this.port}` });
     });
   }
 
   stop(): void {
     this.httpServer.close(() => {
-      console.log('API server stopped');
+      logger.info('API server stopped');
     });
   }
 }

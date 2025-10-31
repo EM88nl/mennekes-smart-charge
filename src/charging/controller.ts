@@ -2,6 +2,7 @@ import { EventEmitter } from 'events';
 import { P1Data, ChargerState, ChargingMode, SystemStatus, Config } from '../types';
 import { ModbusClient } from '../modbus/client';
 import { MovingAverage } from './movingAverage';
+import { logger } from '../logger';
 
 export class ChargingController extends EventEmitter {
   private modbusClient: ModbusClient;
@@ -13,6 +14,8 @@ export class ChargingController extends EventEmitter {
   private targetCurrent: number = 0;
   private lastCheckTime: number = 0;
   private chargerState: ChargerState | null = null;
+  private consecutiveErrors: number = 0;
+  private maxConsecutiveErrors: number = 5;
 
   constructor(modbusClient: ModbusClient, config: Config) {
     super();
@@ -22,9 +25,19 @@ export class ChargingController extends EventEmitter {
   }
 
   async initialize(): Promise<void> {
-    // Read initial charger state
-    await this.updateChargerState();
-    console.log('Charging controller initialized');
+    try {
+      // Read initial charger state
+      await this.updateChargerState();
+      logger.info('Charging controller initialized', {
+        mode: this.currentMode,
+        movingAverageWindow: this.config.charging.movingAverageMinutes
+      });
+    } catch (error) {
+      logger.error('Failed to initialize charging controller', {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw error;
+    }
   }
 
   processP1Data(data: P1Data): void {
@@ -51,33 +64,57 @@ export class ChargingController extends EventEmitter {
   }
 
   private async adjustCharging(): Promise<void> {
-    // Get moving average (negative = surplus)
-    const avgGridFlow = this.movingAverage.getAverage();
-    const surplus = -avgGridFlow; // Convert to positive for surplus
+    try {
+      // Get moving average (negative = surplus)
+      const avgGridFlow = this.movingAverage.getAverage();
+      const surplus = -avgGridFlow; // Convert to positive for surplus
 
-    console.log(`Adjusting charging - Mode: ${this.currentMode}, Surplus: ${surplus.toFixed(2)} kW, Grid Flow: ${avgGridFlow.toFixed(2)} kW`);
+      logger.info('Adjusting charging', {
+        mode: this.currentMode,
+        surplus: surplus.toFixed(2),
+        gridFlow: avgGridFlow.toFixed(2),
+        movingAverageSamples: this.movingAverage.getCount()
+      });
 
-    // Update charger state
-    await this.updateChargerState();
+      // Update charger state
+      await this.updateChargerState();
 
-    // Calculate target current based on mode
-    let shouldCharge = false;
-    let targetCurrent = 0;
+      // Calculate target current based on mode
+      let shouldCharge = false;
+      let targetCurrent = 0;
 
-    switch (this.currentMode) {
-      case 'solar_only':
-        ({ shouldCharge, targetCurrent } = this.calculateSolarOnly(surplus));
-        break;
-      case 'grid_support':
-        ({ shouldCharge, targetCurrent } = this.calculateGridSupport(surplus));
-        break;
-      case 'boost':
-        ({ shouldCharge, targetCurrent } = this.calculateBoost());
-        break;
+      switch (this.currentMode) {
+        case 'solar_only':
+          ({ shouldCharge, targetCurrent } = this.calculateSolarOnly(surplus));
+          break;
+        case 'grid_support':
+          ({ shouldCharge, targetCurrent } = this.calculateGridSupport(surplus));
+          break;
+        case 'boost':
+          ({ shouldCharge, targetCurrent } = this.calculateBoost());
+          break;
+      }
+
+      // Apply changes
+      await this.applyChargingChanges(shouldCharge, targetCurrent);
+
+      // Reset error counter on success
+      this.consecutiveErrors = 0;
+
+    } catch (error) {
+      this.consecutiveErrors++;
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to adjust charging', {
+        error: errorMsg,
+        consecutiveErrors: this.consecutiveErrors,
+        maxErrors: this.maxConsecutiveErrors
+      });
+
+      if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+        logger.error('Max consecutive errors reached, entering safe mode');
+        this.emit('error', new Error('Max consecutive charging adjustment errors reached'));
+      }
     }
-
-    // Apply changes
-    await this.applyChargingChanges(shouldCharge, targetCurrent);
   }
 
   private calculateSolarOnly(surplus: number): { shouldCharge: boolean; targetCurrent: number } {
@@ -137,20 +174,31 @@ export class ChargingController extends EventEmitter {
       if (shouldCharge && targetCurrent >= this.config.charger.minCurrent) {
         // Set charging current
         await this.modbusClient.setChargingCurrent(targetCurrent);
+        const wasCharging = this.charging;
         this.charging = true;
         this.targetCurrent = targetCurrent;
-        console.log(`Charging enabled at ${targetCurrent.toFixed(1)}A per phase`);
+
+        if (!wasCharging) {
+          logger.info('Charging started', { targetCurrent: targetCurrent.toFixed(1) });
+        } else {
+          logger.info('Charging adjusted', { targetCurrent: targetCurrent.toFixed(1) });
+        }
       } else {
         // Stop charging
         await this.modbusClient.setChargingCurrent(0);
+        const wasCharging = this.charging;
         this.charging = false;
         this.targetCurrent = 0;
-        console.log('Charging disabled');
+
+        if (wasCharging) {
+          logger.info('Charging stopped');
+        }
       }
 
       this.emit('status-changed', this.getStatus());
     } catch (error) {
-      console.error('Failed to apply charging changes:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to apply charging changes', { error: errorMsg });
       throw error;
     }
   }
@@ -159,17 +207,19 @@ export class ChargingController extends EventEmitter {
     try {
       this.chargerState = await this.modbusClient.readChargerState();
     } catch (error) {
-      console.error('Failed to read charger state:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to read charger state', { error: errorMsg });
     }
   }
 
   setMode(mode: ChargingMode): void {
-    console.log(`Changing mode from ${this.currentMode} to ${mode}`);
+    logger.info('Mode change requested', { from: this.currentMode, to: mode });
     this.currentMode = mode;
 
     // Immediately adjust charging with new mode
     this.adjustCharging().catch(err => {
-      console.error('Failed to adjust charging after mode change:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      logger.error('Failed to adjust charging after mode change', { error: errorMsg });
     });
 
     this.emit('mode-changed', mode);

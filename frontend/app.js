@@ -1,0 +1,131 @@
+// WebSocket connection
+const socket = io();
+
+// State mapping
+const stateNames = {
+    0: 'Not Initialized',
+    1: 'Idle',
+    2: 'EV Connected',
+    3: 'Preconditions Valid',
+    4: 'Ready to Charge',
+    5: 'Charging',
+    6: 'Error',
+    7: 'Service Mode'
+};
+
+// Connect to WebSocket and handle updates
+socket.on('connect', () => {
+    console.log('Connected to server');
+});
+
+socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+});
+
+socket.on('status', (status) => {
+    console.log('Status update:', status);
+    updateUI(status);
+});
+
+socket.on('mode-changed', (mode) => {
+    console.log('Mode changed:', mode);
+    setActiveMode(mode);
+});
+
+socket.on('error', (error) => {
+    console.error('Server error:', error);
+});
+
+// Update UI with status data
+function updateUI(status) {
+    // Authorization
+    updateAuthStatus(status.authorized);
+
+    // State
+    const stateName = stateNames[status.chargerState.evseState] || 'Unknown';
+    document.getElementById('chargerState').textContent = stateName;
+
+    // Update state color
+    const stateElement = document.getElementById('chargerState');
+    if (status.chargerState.evseState === 5) {
+        stateElement.className = 'status-value charging';
+    } else {
+        stateElement.className = 'status-value idle';
+    }
+
+    // Current Grid Flow
+    updateCurrentGridFlow(status.gridFlow);
+
+    // Average Net Flow
+    updateAvgNetFlow(status.movingAverage);
+
+    // Power (convert W to kW)
+    if (status.charging && status.chargerState.chargingPower > 0) {
+        document.getElementById('powerDisplay').style.display = 'flex';
+        const powerKw = (status.chargerState.chargingPower / 1000).toFixed(2);
+        document.getElementById('powerValue').textContent = `${powerKw} kW`;
+    } else {
+        document.getElementById('powerDisplay').style.display = 'none';
+    }
+
+    // Energy Transferred (convert Wh to kWh)
+    if (status.chargerState.sessionEnergy > 0) {
+        document.getElementById('energyDisplay').style.display = 'flex';
+        const energyKwh = (status.chargerState.sessionEnergy / 1000).toFixed(2);
+        document.getElementById('energyValue').textContent = `${energyKwh} kWh`;
+    } else {
+        document.getElementById('energyDisplay').style.display = 'none';
+    }
+
+    // Duration (convert seconds to h m format)
+    if (status.chargerState.sessionDuration > 0) {
+        document.getElementById('durationDisplay').style.display = 'flex';
+        const duration = formatDuration(status.chargerState.sessionDuration);
+        document.getElementById('durationValue').textContent = duration;
+    } else {
+        document.getElementById('durationDisplay').style.display = 'none';
+    }
+}
+
+// Format duration from seconds to "Xh Ym"
+function formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+}
+
+// Set active mode button
+function setActiveMode(mode) {
+    const buttons = document.querySelectorAll('.mode-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.mode === mode) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Update mode description
+    const modeDescription = document.getElementById('modeDescription');
+    if (modeDescription && window.modeDescriptions) {
+        modeDescription.textContent = window.modeDescriptions[mode];
+    }
+}
+
+// Mode button click handler
+document.querySelectorAll('.mode-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        const mode = this.dataset.mode;
+
+        // Send mode change to server via WebSocket
+        socket.emit('set-mode', mode);
+
+        // Update UI immediately
+        setActiveMode(mode);
+
+        console.log('Mode change requested:', mode);
+    });
+});
+
+// Request initial status on load
+socket.emit('get-status');
