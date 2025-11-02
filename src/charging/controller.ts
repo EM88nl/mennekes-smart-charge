@@ -197,6 +197,13 @@ export class ChargingController extends EventEmitter {
     }
   }
 
+  private isActuallyCharging(): boolean {
+    if (!this.chargerState) return false;
+
+    // Check if charger is delivering power (>100W threshold)
+    return this.chargerState.chargingPower > 100;
+  }
+
   private calculateSolarOnly(surplus: number): { shouldCharge: boolean; targetCurrent: number } {
     const { startThresholdKw, stopThresholdKw } = this.config.charging.solarOnly;
     const { minCurrent, maxCurrent, voltage, phases } = this.config.charger;
@@ -227,9 +234,14 @@ export class ChargingController extends EventEmitter {
 
   private calculateGridSupport(surplus: number): { shouldCharge: boolean; targetCurrent: number } {
     const { minimumCurrent } = this.config.charging.gridSupport;
-    const { maxCurrent, voltage, phases } = this.config.charger;
+    const { minCurrent, maxCurrent, voltage, phases } = this.config.charger;
 
-    // Always charge at minimum
+    // If not actually charging yet, start at minimum safe current (6A)
+    if (!this.isActuallyCharging()) {
+      return { shouldCharge: true, targetCurrent: minCurrent };
+    }
+
+    // Once charging, use minimum + surplus
     let targetCurrent = minimumCurrent;
 
     // If there's surplus, add it to the base current
