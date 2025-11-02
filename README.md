@@ -21,8 +21,8 @@ Intelligent EV charging controller that optimizes charging based on solar surplu
 - **Boost**: Charge at maximum power (32A) regardless of solar surplus
 
 ### 🧠 **Smart Logic**
-- 5-minute moving average of grid flow (1-minute sample intervals)
-- Checks every 5 minutes if charging power should be adjusted
+- 2-minute moving average of grid flow (1-minute sample intervals)
+- Checks every 15 seconds if charging power should be adjusted
 - Smooths out solar fluctuations for stable charging
 - Dynamic current adjustment based on available surplus
 
@@ -97,8 +97,8 @@ Intelligent EV charging controller that optimizes charging based on solar surplu
        "gridSupport": {
          "minimumCurrent": 6
        },
-       "checkIntervalSeconds": 300,
-       "movingAverageMinutes": 5,
+       "checkIntervalSeconds": 15,
+       "movingAverageMinutes": 2,
        "statusUpdateIntervalSeconds": 2
      },
      "api": {
@@ -282,8 +282,8 @@ Configure your P1 meter MQTT broker address and topic. The application expects J
 - Automatically increases with available solar
 
 #### Timing
-- `checkIntervalSeconds`: How often to adjust charging (default: 300s / 5 minutes)
-- `movingAverageMinutes`: Window for averaging grid flow (default: 5 minutes)
+- `checkIntervalSeconds`: How often to adjust charging (default: 15s)
+- `movingAverageMinutes`: Window for averaging grid flow (default: 2 minutes)
 - `statusUpdateIntervalSeconds`: Charger polling interval (default: 2 seconds)
 
 ## 🔢 How It Works
@@ -309,9 +309,9 @@ Example: 11.04 kW / (230V × 3 phases) = 16A
 
 1. **P1 Data Arrival**: MQTT message received every few seconds
 2. **Real-time Update**: Grid flow calculated and broadcast to frontend immediately
-3. **Moving Average**: Sample added every minute to 5-minute rolling average
-4. **Charging Check**: Every 5 minutes, evaluate if adjustment needed:
-   - Calculate average grid flow over last 5 minutes
+3. **Moving Average**: Sample added every minute to 2-minute rolling average
+4. **Charging Check**: Every 15 seconds, evaluate if adjustment needed:
+   - Calculate average grid flow over last 2 minutes
    - Determine target current based on mode and surplus
    - Apply changes via Modbus RTU
 5. **Status Polling**: Charger state read every 2 seconds via Modbus
