@@ -25,7 +25,8 @@ export class ChargingController extends EventEmitter {
     super();
     this.modbusClient = modbusClient;
     this.config = config;
-    this.movingAverage = new MovingAverage(config.charging.movingAverageMinutes);
+    const updateIntervalMinutes = config.charging.movingAverageUpdateSeconds / 60;
+    this.movingAverage = new MovingAverage(config.charging.movingAverageMinutes, updateIntervalMinutes);
   }
 
   async initialize(): Promise<void> {

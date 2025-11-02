@@ -25,8 +25,9 @@
     "gridSupport": {
       "minimumCurrent": 6
     },
-    "checkIntervalSeconds": 15,
+    "checkIntervalSeconds": 300,
     "movingAverageMinutes": 2,
+    "movingAverageUpdateSeconds": 15,
     "statusUpdateIntervalSeconds": 2
   },
   "api": {

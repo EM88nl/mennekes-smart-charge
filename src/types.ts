@@ -69,6 +69,7 @@ export interface Config {
     };
     checkIntervalSeconds: number;
     movingAverageMinutes: number;
+    movingAverageUpdateSeconds: number;
     statusUpdateIntervalSeconds: number;
   };
   api: {
