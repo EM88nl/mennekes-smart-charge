@@ -151,6 +151,90 @@
             font-size: 14px;
             line-height: 1.5;
         }
+
+        /* Confirmation Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .modal-body {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .modal-mode-name {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .modal-btn-cancel {
+            background: #e5e7eb;
+            color: #333;
+        }
+
+        .modal-btn-cancel:hover {
+            background: #d1d5db;
+        }
+
+        .modal-btn-confirm {
+            background: #667eea;
+            color: white;
+        }
+
+        .modal-btn-confirm:hover {
+            background: #5568d3;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body>
@@ -215,6 +299,20 @@
                     <span class="status-label">Duration</span>
                     <span class="status-value duration-value" id="durationValue">0h 0m</span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <div class="modal-header">Confirm Mode Change</div>
+            <div class="modal-body">
+                Are you sure you want to change to <span class="modal-mode-name" id="modalModeName"></span> mode?
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" id="modalConfirm">Confirm</button>
             </div>
         </div>
     </div>

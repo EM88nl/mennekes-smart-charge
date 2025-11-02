@@ -104,18 +104,68 @@ function setActiveMode(mode) {
     }
 }
 
+// Modal elements
+const confirmModal = document.getElementById('confirmModal');
+const modalModeName = document.getElementById('modalModeName');
+const modalCancel = document.getElementById('modalCancel');
+const modalConfirm = document.getElementById('modalConfirm');
+
+// Mode name mapping for display
+const modeDisplayNames = {
+    solar_only: 'Solar Only',
+    grid_support: 'Grid Support',
+    boost: 'Boost'
+};
+
+// Pending mode change
+let pendingMode = null;
+
+// Show confirmation modal
+function showConfirmModal(mode) {
+    pendingMode = mode;
+    modalModeName.textContent = modeDisplayNames[mode];
+    confirmModal.classList.add('active');
+}
+
+// Hide confirmation modal
+function hideConfirmModal() {
+    confirmModal.classList.remove('active');
+    pendingMode = null;
+}
+
+// Modal cancel handler
+modalCancel.addEventListener('click', () => {
+    hideConfirmModal();
+});
+
+// Modal confirm handler
+modalConfirm.addEventListener('click', () => {
+    if (pendingMode) {
+        // Send mode change to server via WebSocket
+        socket.emit('set-mode', pendingMode);
+
+        // Update UI immediately
+        setActiveMode(pendingMode);
+
+        console.log('Mode change confirmed:', pendingMode);
+    }
+    hideConfirmModal();
+});
+
+// Close modal when clicking outside
+confirmModal.addEventListener('click', (e) => {
+    if (e.target === confirmModal) {
+        hideConfirmModal();
+    }
+});
+
 // Mode button click handler
 document.querySelectorAll('.mode-btn').forEach(button => {
     button.addEventListener('click', function() {
         const mode = this.dataset.mode;
 
-        // Send mode change to server via WebSocket
-        socket.emit('set-mode', mode);
-
-        // Update UI immediately
-        setActiveMode(mode);
-
-        console.log('Mode change requested:', mode);
+        // Show confirmation modal instead of immediately changing
+        showConfirmModal(mode);
     });
 });
 
