@@ -316,6 +316,9 @@ export class ChargingController extends EventEmitter {
     logger.info('Mode change requested', { from: this.currentMode, to: mode });
     this.currentMode = mode;
 
+    // Reset timer to give new mode time to stabilize
+    this.lastCheckTime = Date.now();
+
     // Immediately adjust charging with new mode
     this.adjustCharging().catch(err => {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
