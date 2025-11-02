@@ -20,6 +20,8 @@ export class ChargingController extends EventEmitter {
   private p1MessageCount: number = 0;
   private sessionLog: Array<{ timestamp: Date; message: string }> = [];
   private lastEvseState: number = 0;
+  private lastLoggedCurrent: number = -1;
+  private lastLoggedCharging: boolean = false;
 
   constructor(modbusClient: ModbusClient, config: Config) {
     super();
@@ -296,6 +298,8 @@ export class ChargingController extends EventEmitter {
     // Detect session start (transition from idle/ready to connected or charging)
     if (this.lastEvseState <= 1 && currentEvseState > 1) {
       this.sessionLog = []; // Clear log for new session
+      this.lastLoggedCurrent = -1; // Reset to ensure first adjustment is logged
+      this.lastLoggedCharging = false;
       this.addSessionLog('Session started');
     }
 
@@ -320,12 +324,24 @@ export class ChargingController extends EventEmitter {
         this.charging = true;
         this.targetCurrent = targetCurrent;
 
+        // Determine if we should log this change
+        const chargingStateChanged = !wasCharging;
+        const currentChanged = Math.abs(targetCurrent - this.lastLoggedCurrent) > 0.5;
+        const shouldLog = chargingStateChanged || currentChanged;
+
         if (!wasCharging) {
           logger.info('Charging started', { targetCurrent: targetCurrent.toFixed(1) });
-          this.addSessionLog(`Charging started: ${reason}`);
+          if (shouldLog) {
+            this.addSessionLog(`Charging started: ${reason}`);
+            this.lastLoggedCurrent = targetCurrent;
+            this.lastLoggedCharging = true;
+          }
         } else {
           logger.info('Charging adjusted', { targetCurrent: targetCurrent.toFixed(1) });
-          this.addSessionLog(`Adjusted: ${reason}`);
+          if (shouldLog) {
+            this.addSessionLog(`Adjusted: ${reason}`);
+            this.lastLoggedCurrent = targetCurrent;
+          }
         }
       } else {
         // Stop charging
@@ -337,6 +353,8 @@ export class ChargingController extends EventEmitter {
         if (wasCharging) {
           logger.info('Charging stopped');
           this.addSessionLog(`Charging stopped: ${reason}`);
+          this.lastLoggedCurrent = 0;
+          this.lastLoggedCharging = false;
         }
       }
 
