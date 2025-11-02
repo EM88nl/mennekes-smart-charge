@@ -36,6 +36,7 @@ export interface SystemStatus {
   authorized: boolean;
   targetCurrent: number;      // A per phase
   lastUpdate: Date;
+  sessionLog: Array<{ timestamp: Date; message: string }>;
 }
 
 // Configuration

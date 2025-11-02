@@ -235,6 +235,45 @@
         .modal-btn:active {
             transform: scale(0.98);
         }
+
+        /* Session Log */
+        .session-log {
+            max-height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 12px;
+            padding: 8px;
+            background: #f7f7f7;
+            border-radius: 6px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .log-timestamp {
+            color: #999;
+            font-size: 13px;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+
+        .log-message {
+            color: #333;
+            flex: 1;
+        }
+
+        .session-log:empty::after {
+            content: 'No session activity yet';
+            color: #999;
+            text-align: center;
+            padding: 20px;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -299,6 +338,14 @@
                     <span class="status-label">Duration</span>
                     <span class="status-value duration-value" id="durationValue">0h 0m</span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Card 4: Session Log -->
+        <div class="card">
+            <h2>Session Log</h2>
+            <div class="session-log" id="sessionLog">
+                <!-- Log entries will be added here dynamically -->
             </div>
         </div>
     </div>

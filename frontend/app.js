@@ -77,6 +77,9 @@ function updateUI(status) {
     // Duration (convert seconds to h m format) - always show
     const duration = formatDuration(status.chargerState.sessionDuration);
     document.getElementById('durationValue').textContent = duration;
+
+    // Update session log
+    updateSessionLog(status.sessionLog);
 }
 
 // Format duration from seconds to "Xh Ym"
@@ -84,6 +87,35 @@ function formatDuration(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
+}
+
+// Format timestamp to HH:MM:SS
+function formatTime(date) {
+    const d = new Date(date);
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+}
+
+// Update session log
+function updateSessionLog(logEntries) {
+    const logContainer = document.getElementById('sessionLog');
+
+    if (!logEntries || logEntries.length === 0) {
+        logContainer.innerHTML = '';
+        return;
+    }
+
+    // Build HTML for all log entries (newest first)
+    const html = logEntries.slice().reverse().map(entry => `
+        <div class="log-entry">
+            <span class="log-timestamp">${formatTime(entry.timestamp)}</span>
+            <span class="log-message">${entry.message}</span>
+        </div>
+    `).join('');
+
+    logContainer.innerHTML = html;
 }
 
 // Set active mode button

@@ -18,6 +18,8 @@ export class ChargingController extends EventEmitter {
   private maxConsecutiveErrors: number = 5;
   private statusUpdateInterval: NodeJS.Timeout | null = null;
   private p1MessageCount: number = 0;
+  private sessionLog: Array<{ timestamp: Date; message: string }> = [];
+  private lastEvseState: number = 0;
 
   constructor(modbusClient: ModbusClient, config: Config) {
     super();
@@ -162,21 +164,33 @@ export class ChargingController extends EventEmitter {
       // Calculate target current based on mode
       let shouldCharge = false;
       let targetCurrent = 0;
+      let reason = '';
 
       switch (this.currentMode) {
         case 'solar_only':
           ({ shouldCharge, targetCurrent } = this.calculateSolarOnly(surplus));
+          reason = shouldCharge
+            ? `Solar surplus ${surplus.toFixed(2)}kW, charging at ${targetCurrent.toFixed(1)}A`
+            : `Insufficient surplus (${surplus.toFixed(2)}kW), not charging`;
           break;
         case 'grid_support':
           ({ shouldCharge, targetCurrent } = this.calculateGridSupport(surplus));
+          if (!this.isActuallyCharging()) {
+            reason = `Starting at minimum ${targetCurrent.toFixed(1)}A (not charging yet)`;
+          } else {
+            reason = surplus > 0
+              ? `Min + surplus: ${targetCurrent.toFixed(1)}A (surplus ${surplus.toFixed(2)}kW)`
+              : `Minimum charging ${targetCurrent.toFixed(1)}A (no surplus)`;
+          }
           break;
         case 'boost':
           ({ shouldCharge, targetCurrent } = this.calculateBoost());
+          reason = `Boost mode: maximum ${targetCurrent.toFixed(1)}A`;
           break;
       }
 
       // Apply changes
-      await this.applyChargingChanges(shouldCharge, targetCurrent);
+      await this.applyChargingChanges(shouldCharge, targetCurrent, reason);
 
       // Reset error counter on success
       this.consecutiveErrors = 0;
@@ -258,7 +272,42 @@ export class ChargingController extends EventEmitter {
     return { shouldCharge: true, targetCurrent: maxCurrent };
   }
 
-  private async applyChargingChanges(shouldCharge: boolean, targetCurrent: number): Promise<void> {
+  private addSessionLog(message: string): void {
+    const entry = {
+      timestamp: new Date(),
+      message
+    };
+    this.sessionLog.push(entry);
+
+    // Keep only last 50 entries
+    if (this.sessionLog.length > 50) {
+      this.sessionLog.shift();
+    }
+
+    logger.debug('Session log entry', entry);
+  }
+
+  private checkSessionChange(): void {
+    if (!this.chargerState) return;
+
+    const currentEvseState = this.chargerState.evseState;
+
+    // Detect session start (transition from idle/ready to connected or charging)
+    if (this.lastEvseState <= 1 && currentEvseState > 1) {
+      this.sessionLog = []; // Clear log for new session
+      this.addSessionLog('Session started');
+    }
+
+    // Detect session end (transition back to idle/ready)
+    if (this.lastEvseState > 1 && currentEvseState <= 1) {
+      this.addSessionLog('Session ended');
+      // Don't clear log yet, let user see final session
+    }
+
+    this.lastEvseState = currentEvseState;
+  }
+
+  private async applyChargingChanges(shouldCharge: boolean, targetCurrent: number, reason: string): Promise<void> {
     try {
       // Always set charging release first
       await this.modbusClient.setChargingRelease(shouldCharge);
@@ -272,8 +321,10 @@ export class ChargingController extends EventEmitter {
 
         if (!wasCharging) {
           logger.info('Charging started', { targetCurrent: targetCurrent.toFixed(1) });
+          this.addSessionLog(`Charging started: ${reason}`);
         } else {
           logger.info('Charging adjusted', { targetCurrent: targetCurrent.toFixed(1) });
+          this.addSessionLog(`Adjusted: ${reason}`);
         }
       } else {
         // Stop charging
@@ -284,6 +335,7 @@ export class ChargingController extends EventEmitter {
 
         if (wasCharging) {
           logger.info('Charging stopped');
+          this.addSessionLog(`Charging stopped: ${reason}`);
         }
       }
 
@@ -299,6 +351,10 @@ export class ChargingController extends EventEmitter {
     try {
       logger.debug('Reading charger state from Modbus...');
       this.chargerState = await this.modbusClient.readChargerState();
+
+      // Check for session changes (start/end)
+      this.checkSessionChange();
+
       logger.debug('Charger state updated', {
         evseState: this.chargerState.evseState,
         authStatus: this.chargerState.authStatus,
@@ -314,7 +370,16 @@ export class ChargingController extends EventEmitter {
 
   setMode(mode: ChargingMode): void {
     logger.info('Mode change requested', { from: this.currentMode, to: mode });
+    const oldMode = this.currentMode;
     this.currentMode = mode;
+
+    // Log mode change
+    const modeNames = {
+      solar_only: 'Solar Only',
+      grid_support: 'Grid Support',
+      boost: 'Boost'
+    };
+    this.addSessionLog(`Mode changed: ${modeNames[oldMode]} → ${modeNames[mode]}`);
 
     // Reset timer to give new mode time to stabilize
     this.lastCheckTime = Date.now();
@@ -352,7 +417,8 @@ export class ChargingController extends EventEmitter {
       charging: this.charging,
       authorized: this.chargerState?.authStatus === 1,
       targetCurrent: this.targetCurrent,
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
+      sessionLog: this.sessionLog
     };
   }
 }
