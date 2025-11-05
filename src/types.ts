@@ -36,6 +36,7 @@ export interface SystemStatus {
   authorized: boolean;
   targetCurrent: number;      // A per phase
   lastUpdate: Date;
+  sessionLog: Array<{ timestamp: Date; message: string }>;
 }
 
 // Configuration
@@ -68,6 +69,7 @@ export interface Config {
     };
     checkIntervalSeconds: number;
     movingAverageMinutes: number;
+    movingAverageUpdateSeconds: number;
     statusUpdateIntervalSeconds: number;
   };
   api: {

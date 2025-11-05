@@ -30,7 +30,8 @@ class MockChargingController {
       charging: false,
       authorized: true,
       targetCurrent: 0,
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
+      sessionLog: []
     };
   }
 

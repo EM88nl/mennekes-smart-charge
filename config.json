@@ -26,7 +26,8 @@
       "minimumCurrent": 6
     },
     "checkIntervalSeconds": 300,
-    "movingAverageMinutes": 5,
+    "movingAverageMinutes": 2,
+    "movingAverageUpdateSeconds": 15,
     "statusUpdateIntervalSeconds": 2
   },
   "api": {
